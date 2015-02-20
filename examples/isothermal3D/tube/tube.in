@@ -1,0 +1,26 @@
+# Base name of the I/O data files (raw-format files)
+tube_x23_y23_z101
+# Lattice size (x y z)
+23 23 101
+# Lattice spacing
+1.0
+# Discrete time step
+1.0
+# Reference density
+1.0
+# Kinematic viscosity
+0.15
+# Gravity (gx gy gz)
+0.0 0.0 1.0e-5
+# Additional external forcing (No=0, Yes=1)
+0
+# Flow type (Stokes=0, Laminar=1, Turbulent=2)
+1
+# Collision operator (BGK=0, TRT=1, MRT=2, Regul.=3)
+1
+# Number of discrete time steps
+10000
+# Evolution info output interval (0=No output)
+1000
+# Execution info
+File I/O-based SimPhoNy wrapper run
