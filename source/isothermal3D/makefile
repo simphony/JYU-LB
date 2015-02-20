@@ -7,8 +7,12 @@ LFLAGS=-fopenmp -O3
 
 all: jyu_lb_isothermal
 
-jyu_lb_isothermal: lattice.o collision.o kernel.o solver.o parser.o raw_io.o main.o
-		   $(CC) $(LFLAGS) lattice.o collision.o kernel.o solver.o parser.o raw_io.o main.o -o ../../exec/jyu_lb_isothermal3D.exe
+jyu_lb_isothermal: dirs lattice.o collision.o kernel.o solver.o parser.o raw_io.o main.o
+		   $(CC) $(LFLAGS) lattice.o collision.o kernel.o solver.o parser.o raw_io.o main.o -o ../../bin/jyu_lb_isothermal3D.exe
+
+
+dirs:
+	@mkdir -p ../../bin
 
 lattice.o: lattice.cpp
 	$(CC) $(CFLAGS) $< -o $@
