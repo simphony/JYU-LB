@@ -9,14 +9,89 @@
 #include <limits>
 #include <stdio.h>
 #include "D3Q19.h"
-#include "lb_kernel.h"
+#include "kernel.h"
 //===========================================================================
 using namespace D3Q19;
-using namespace LB_Kernel;
 //===========================================================================
-typedef void (Isothermal3D::*FI_IND_FPTR)(ULLINT *, ULLINT);
+// bit masks for integer composed of at least 32 bits
+const UINT BIT1_MASK  = 1;          // 2^0
+const UINT BIT2_MASK  = 2;          // 2^1
+const UINT BIT3_MASK  = 4;          // 2^2
+const UINT BIT4_MASK  = 8;          // 2^3
+const UINT BIT5_MASK  = 16;         // 2^4
+const UINT SW_MASK = 32;         // 2^5
+const UINT BW_MASK = 64;         // 2^6
+const UINT W_MASK  = 128;        // 2^7
+const UINT TW_MASK = 256;        // 2^8
+const UINT NW_MASK = 512;        // 2^9
+const UINT BS_MASK = 1024;       // 2^10
+const UINT S_MASK  = 2048;       // 2^11
+const UINT TS_MASK = 4096;       // 2^12
+const UINT B_MASK  = 8192;       // 2^13
+const UINT C_MASK  = 16384;      // 2^14
+const UINT T_MASK  = 32768;      // 2^15
+const UINT BN_MASK = 65536;      // 2^16
+const UINT N_MASK  = 131072;     // 2^17
+const UINT TN_MASK = 262144;     // 2^18
+const UINT SE_MASK = 524288;     // 2^19
+const UINT BE_MASK = 1048576;    // 2^20
+const UINT E_MASK  = 2097152;    // 2^21
+const UINT TE_MASK = 4194304;    // 2^22
+const UINT NE_MASK = 8388608;    // 2^23
+const UINT BIT25_MASK = 16777216;   // 2^24
+const UINT BIT26_MASK = 33554432;   // 2^25
+const UINT BIT27_MASK = 67108864;   // 2^26
+const UINT BIT28_MASK = 134217728;  // 2^27
+const UINT BIT29_MASK = 268435456;  // 2^28
+const UINT BIT30_MASK = 536870912;  // 2^29
+const UINT BIT31_MASK = 1073741824; // 2^30
+const UINT BIT32_MASK = 2147483648; // 2^31
+
+// in FULL_MASK every bit has value 1
+const UINT FULL_MASK = 0xFFFFFFFF;
+// in QCOUNT_MASK first five bits have value 1
+const UINT QCOUNT_MASK = 0x0000001F;
+// in OPTIONAL_BYTE_MASK last eight bits have value 1
+const UINT OPTIONAL_BYTE_MASK = 0xFF000000;
+
+UINT CI_MASKS[Q];
 //===========================================================================
-void Isothermal3D::get_fi_ind_arr_odd_t(ULLINT *fi_ind, ULLINT fnode_enum)
+typedef void (IsothermalKernel::*FI_IND_FPTR)(ULLINT *, ULLINT);
+//===========================================================================
+void init_ci_masks()
+{
+  CI_MASKS[BS] = BS_MASK;
+  CI_MASKS[BW] = BW_MASK;
+  CI_MASKS[B]  = B_MASK;
+  CI_MASKS[BE] = BE_MASK;
+  CI_MASKS[BN] = BN_MASK;
+  CI_MASKS[SW] = SW_MASK;
+  CI_MASKS[S]  = S_MASK;
+  CI_MASKS[SE] = SE_MASK;
+  CI_MASKS[W]  = W_MASK;
+  CI_MASKS[C]  = C_MASK;
+  CI_MASKS[E]  = E_MASK;
+  CI_MASKS[NW] = NW_MASK;
+  CI_MASKS[N]  = N_MASK;
+  CI_MASKS[NE] = NE_MASK;
+  CI_MASKS[TS] = TS_MASK;
+  CI_MASKS[TW] = TW_MASK;
+  CI_MASKS[T]  = T_MASK;
+  CI_MASKS[TE] = TE_MASK;
+  CI_MASKS[TN] = TN_MASK;
+}
+//---------------------------------------------------------------------------
+bool IsothermalKernel::is_solid_nghbr(UINT fnode_enum, unsigned char l)
+{
+  return (_nghbr_info[fnode_enum] & CI_MASKS[l]) != 0;
+}
+//---------------------------------------------------------------------------
+UINT IsothermalKernel::get_solid_nghbr_count(UINT fnode_enum)
+{
+  return (_nghbr_info[fnode_enum] & QCOUNT_MASK);
+}
+//---------------------------------------------------------------------------
+void IsothermalKernel::get_fi_ind_arr_odd_t(ULLINT *fi_ind, ULLINT fnode_enum)
 {
   ULLINT off = 19ull*fnode_enum;
   fi_ind[BS] = a_mem_addr[off];
@@ -40,7 +115,7 @@ void Isothermal3D::get_fi_ind_arr_odd_t(ULLINT *fi_ind, ULLINT fnode_enum)
   fi_ind[TN] = a_mem_addr[off + 18ull];
 }
 //---------------------------------------------------------------------------
-void Isothermal3D::get_fi_ind_arr_even_t(ULLINT *fi_ind, ULLINT fnode_enum)
+void IsothermalKernel::get_fi_ind_arr_even_t(ULLINT *fi_ind, ULLINT fnode_enum)
 {
   fi_ind[BS] = F_TN_IND(fnode_enum,a_ull_fluid_ncount);
   fi_ind[BW] = F_TE_IND(fnode_enum,a_ull_fluid_ncount);
@@ -63,7 +138,7 @@ void Isothermal3D::get_fi_ind_arr_even_t(ULLINT *fi_ind, ULLINT fnode_enum)
   fi_ind[TN] = F_BS_IND(fnode_enum,a_ull_fluid_ncount);
 }
 //---------------------------------------------------------------------------
-void Isothermal3D::get_fi_ind_arr(ULLINT *fi_ind, ULLINT fnode_enum)
+void IsothermalKernel::get_fi_ind_arr(ULLINT *fi_ind, ULLINT fnode_enum)
 {
   fi_ind[BS] = F_BS_IND(fnode_enum,a_ull_fluid_ncount);
   fi_ind[BW] = F_BW_IND(fnode_enum,a_ull_fluid_ncount);
@@ -86,7 +161,7 @@ void Isothermal3D::get_fi_ind_arr(ULLINT *fi_ind, ULLINT fnode_enum)
   fi_ind[TN] = F_TN_IND(fnode_enum,a_ull_fluid_ncount);
 }
 //---------------------------------------------------------------------------
-ULLINT Isothermal3D::get_fi_ind(ULLINT fnode_enum, unsigned char l)
+ULLINT IsothermalKernel::get_fi_ind(ULLINT fnode_enum, unsigned char l)
 {
   switch( l ) {
     case BS: return F_BS_IND(fnode_enum,a_ull_fluid_ncount);
@@ -112,13 +187,14 @@ ULLINT Isothermal3D::get_fi_ind(ULLINT fnode_enum, unsigned char l)
   } 
 }
 //---------------------------------------------------------------------------
-void Isothermal3D::alloc_memory(unsigned int fluid_ncount)
+void IsothermalKernel::alloc_memory(UINT fluid_ncount)
 {
   a_ull_fluid_ncount = fluid_ncount;
   ULLINT mem_count_d3q19 = a_ull_fluid_ncount*(ULLINT)(Q);
 
   a_mem_addr = new ULLINT[mem_count_d3q19];
   a_fi = new double[mem_count_d3q19];
+  _nghbr_info = new UINT[fluid_ncount];
 
   #pragma omp parallel for
   for(ULLINT m = 0ull; m < mem_count_d3q19; ++m) {
@@ -127,7 +203,7 @@ void Isothermal3D::alloc_memory(unsigned int fluid_ncount)
   }
 }
 //---------------------------------------------------------------------------
-void Isothermal3D::dealloc_memory()
+void IsothermalKernel::dealloc_memory()
 {
   if( a_mem_addr != 0 ) {
     delete [] a_mem_addr;
@@ -137,6 +213,10 @@ void Isothermal3D::dealloc_memory()
     delete [] a_fi;
     a_fi = 0;
   }
+  if( _nghbr_info != 0 ) {
+    delete [] _nghbr_info;
+    _nghbr_info = 0;
+  }
   if( a_coll_oper != 0 ) {
     delete a_coll_oper;
     a_coll_oper = 0;
@@ -144,77 +224,108 @@ void Isothermal3D::dealloc_memory()
   a_ull_fluid_ncount = 0;
 }
 //---------------------------------------------------------------------------
-void Isothermal3D::config_evolve(Lattice::Isothermal3D *lat)
+void IsothermalKernel::config_evolve(Geometry *geom, NodeSet *fnodes)
 {
-  using namespace LB_Const;
-  unsigned int fluid_ncount = lat->fluid_ncount();
-  int nx = lat->nx(), ny = lat->ny(), nz = lat->nz();
+  Lattice *lat = geom->get_lattice();
+  GeomData *phase = geom->get_phase();
+  
+  UINT size[3], fluid_ncount = fnodes->get_node_count();
+  lat->get_size(size);
 
+  _nx = size[0]; _ny = size[1]; _nz = size[2];
   alloc_memory(fluid_ncount);
   
   #pragma omp parallel for
-  for(unsigned int fnode_enum = 0; fnode_enum < fluid_ncount; ++fnode_enum)
+  for(UINT fnode_enum = 0; fnode_enum < fluid_ncount; ++fnode_enum)
   {
-    unsigned int i,j,k;
-    lat->get_fnode_lat_coord(fnode_enum, &i, &j, &k);
+    UINT ijk[3];
+    fnodes->get_ijk(fnode_enum, ijk);
 
+    UINT solid_nghbr_count = 0;
+    _nghbr_info[fnode_enum] = 0;
     for(unsigned char l = 0; l < Q; ++l)
     {
       // Periodic bc in all directions by default
       int ci = CI[l][X], cj = CI[l][Y], ck = CI[l][Z],
-        ni = (int)i - ci, nj = (int)j - cj, nk = (int)k - ck,
-        per_ni = (ni+nx)%nx, per_nj = (nj+ny)%ny, per_nk = (nk+nz)%nz;
+        ni = (int)ijk[0] - ci, nj = (int)ijk[1] - cj, nk = (int)ijk[2] - ck,
+        per_ni = (ni + (int)_nx)%(int)_nx,
+        per_nj = (nj + (int)_ny)%(int)_ny,
+        per_nk = (nk + (int)_nz)%(int)_nz;
             
-      unsigned int fnode_enum_nn;
+      UINT ijk_n[3] = {per_ni, per_nj, per_nk};
       ULLINT mem_addr_ind = 19ull*(ULLINT)fnode_enum + (ULLINT)l;
-                     
-      // Halfway-bounceback
-      if( lat->get_fnode_enum_ijk(per_ni, per_nj, per_nk, &fnode_enum_nn) ) {
+               
+      // Halfway-bounceback (FLUID_NODE->stream, SOLID_NODE->hbb)
+      if( phase->get_val_ijk(ijk_n) == FLUID_NODE ) {
+        UINT fnode_enum_nn = fnodes->get_n(ijk_n);
         a_mem_addr[mem_addr_ind] = get_fi_ind(fnode_enum_nn,l);
       } else {
         a_mem_addr[mem_addr_ind] = get_fi_ind(fnode_enum,RDIR[l]);
+        _nghbr_info[fnode_enum] |= CI_MASKS[RDIR[l]];
+        solid_nghbr_count++;
       }
     }
+    _nghbr_info[fnode_enum] |= solid_nghbr_count;
   }
   a_odd_t = true;
 }
 //---------------------------------------------------------------------------
-void Isothermal3D::comp_der(Lattice::Isothermal3D *lat,
-  unsigned int back_nn, unsigned int forw_nn, double ux, double uy,
-  double uz, double *der_ux, double *der_uy, double *der_uz)
+void IsothermalKernel::comp_der(IsothermalNodeData *fdata, UINT fnode_enum, 
+  unsigned char forw_l, UINT ijk_forw[3], UINT ijk_back[3],
+  double ux, double uy, double uz, double *der_ux,
+  double *der_uy, double *der_uz)
 {
-  if( lat->get_geom_n(forw_nn) == LB_Const::SOLID_NODE ) {
-    if( lat->get_geom_n(back_nn) == LB_Const::SOLID_NODE ) {
+  unsigned char back_l = RDIR[forw_l];
+  FieldData *vx = fdata->velx(), *vy = fdata->vely(), *vz = fdata->velz();
+
+  if( is_solid_nghbr(fnode_enum, forw_l) ) {
+    if( is_solid_nghbr(fnode_enum, back_l) ) {
       // der_g = [g(+0.5) - g(-0.5)]/(2*0.5)
       (*der_ux) = 0.0;
       (*der_uy) = 0.0;
       (*der_uz) = 0.0;
     } else {
       // der_g = [4*g(0.5) - 3*g(0) - g(-1)]/3
-      double ux_back, uy_back, uz_back;
-      lat->get_vel_n(back_nn,&ux_back,&uy_back,&uz_back);
-      ux_back *= a_inv_cr; uy_back *= a_inv_cr; uz_back *= a_inv_cr;
+      double ux_back = vx->get_val_ijk(ijk_back),
+        uy_back = vy->get_val_ijk(ijk_back),
+        uz_back = vz->get_val_ijk(ijk_back);
+
+      ux_back *= a_inv_cr;
+      uy_back *= a_inv_cr;
+      uz_back *= a_inv_cr;
 
       (*der_ux) = (1.0/3.0)*(4.0*0.0 - 3.0*ux - ux_back);
       (*der_uy) = (1.0/3.0)*(4.0*0.0 - 3.0*uy - uy_back);
       (*der_uz) = (1.0/3.0)*(4.0*0.0 - 3.0*uz - uz_back);
     }
-  } else if( lat->get_geom_n(back_nn) == LB_Const::SOLID_NODE ) {
+  } else if( is_solid_nghbr(fnode_enum, back_l) ) {
     // der_g = [g(+1) + 3*g(0) - 4*g(-0.5)]/3
-    double ux_forw, uy_forw, uz_forw;
-    lat->get_vel_n(forw_nn,&ux_forw,&uy_forw,&uz_forw);
-    ux_forw *= a_inv_cr; uy_forw *= a_inv_cr; uz_forw *= a_inv_cr;
+      double ux_forw = vx->get_val_ijk(ijk_forw),
+        uy_forw = vy->get_val_ijk(ijk_forw),
+        uz_forw = vz->get_val_ijk(ijk_forw);
+
+      ux_forw *= a_inv_cr;
+      uy_forw *= a_inv_cr;
+      uz_forw *= a_inv_cr;
 
     (*der_ux) = (1.0/3.0)*(ux_forw + 3.0*ux - 4.0*0.0);
     (*der_uy) = (1.0/3.0)*(uy_forw + 3.0*uy - 4.0*0.0);
     (*der_uz) = (1.0/3.0)*(uz_forw + 3.0*uz - 4.0*0.0);
   } else {
     // der_g = [g(+1) - g(-1)]/(2*1)
-    double ux_back, uy_back, uz_back, ux_forw, uy_forw, uz_forw;
-    lat->get_vel_n(back_nn,&ux_back,&uy_back,&uz_back);
-    lat->get_vel_n(forw_nn,&ux_forw,&uy_forw,&uz_forw);
-    ux_back *= a_inv_cr; uy_back *= a_inv_cr; uz_back *= a_inv_cr;
-    ux_forw *= a_inv_cr; uy_forw *= a_inv_cr; uz_forw *= a_inv_cr;
+    double ux_back = vx->get_val_ijk(ijk_back),
+      uy_back = vy->get_val_ijk(ijk_back),
+      uz_back = vz->get_val_ijk(ijk_back),
+      ux_forw = vx->get_val_ijk(ijk_forw),
+      uy_forw = vy->get_val_ijk(ijk_forw),
+      uz_forw = vz->get_val_ijk(ijk_forw);
+
+    ux_back *= a_inv_cr;
+    uy_back *= a_inv_cr;
+    uz_back *= a_inv_cr;
+    ux_forw *= a_inv_cr;
+    uy_forw *= a_inv_cr;
+    uz_forw *= a_inv_cr;
 
     (*der_ux) = 0.5*(ux_forw - ux_back);
     (*der_uy) = 0.5*(uy_forw - uy_back);
@@ -222,31 +333,34 @@ void Isothermal3D::comp_der(Lattice::Isothermal3D *lat,
   }
 }
 //---------------------------------------------------------------------------
-void Isothermal3D::initialize_fi(Lattice::Isothermal3D *lat)
+void IsothermalKernel::initialize_fi(IsothermalNodeData *fdata)
 {
-  using namespace LB_Const;
-
   ULLINT fi_ind[Q];
   double fi[Q], feq[Q], fext[Q], KI2[Q][3][3],
     pab_cff = -2.0*a_coll_oper->get_kvisc_relax_t()*CT2,
     gx = a_dt*a_inv_cr*a_gx, gy = a_dt*a_inv_cr*a_gy,
     gz = a_dt*a_inv_cr*a_gz;
   
-  unsigned int fluid_ncount = lat->fluid_ncount();
-  int nx = lat->nx(), ny = lat->ny(), nz = lat->nz();
   get_kin_proj2(KI2);
+  NodeSet *fnodes = fdata->get_nodeset();
+  UINT fluid_ncount = fnodes->get_node_count();
+
+  FieldData *den_data = fdata->den(), *vx_data = fdata->velx(),
+    *vy_data = fdata->vely(), *vz_data = fdata->velz(),
+    *fx_data = fdata->frcx(), *fy_data = fdata->frcy(),
+    *fz_data = fdata->frcz();
   
   #pragma omp parallel for private(fi_ind, fi, feq, fext)
-  for(unsigned int fnode_enum = 0; fnode_enum < fluid_ncount; ++fnode_enum)
+  for(UINT fnode_enum = 0; fnode_enum < fluid_ncount; ++fnode_enum)
   {
-    unsigned int i,j,k;
+    UINT ijk[3];
+    fnodes->get_ijk(fnode_enum, ijk);
     get_fi_ind_arr(fi_ind, fnode_enum);
-    lat->get_fnode_lat_coord(fnode_enum, &i, &j, &k);
         
-    double den, ux, uy, uz, fx, fy, fz;
-    lat->get_fnode_den(fnode_enum, &den);
-    lat->get_fnode_vel(fnode_enum, &ux, &uy, &uz);
-    lat->get_fnode_force(fnode_enum,&fx,&fy,&fz);
+    double den = den_data->get_val_n(fnode_enum),
+      ux = vx_data->get_val_n(fnode_enum), uy = vy_data->get_val_n(fnode_enum), 
+      uz = vz_data->get_val_n(fnode_enum), fx = fx_data->get_val_n(fnode_enum),
+      fy = fy_data->get_val_n(fnode_enum), fz = fz_data->get_val_n(fnode_enum); 
 
     den *= a_inv_ref_den; ux *= a_inv_cr; uy *= a_inv_cr; uz *= a_inv_cr;
     fx *= a_inv_bf_unit; fy *= a_inv_bf_unit; fz *= a_inv_bf_unit;
@@ -255,21 +369,24 @@ void Isothermal3D::initialize_fi(Lattice::Isothermal3D *lat)
     a_frc_func(ux,uy,uz,fx,fy,fz,fext);
     a_eq_func(den,ux,uy,uz,feq);
         
-    int per_i_e = ((int)i + 1 + nx)%nx, per_i_w = ((int)i - 1 + nx)%nx,
-        per_j_n = ((int)j + 1 + ny)%ny, per_j_s = ((int)j - 1 + ny)%ny,
-        per_k_t = ((int)k + 1 + nz)%nz, per_k_b = ((int)k - 1 + nz)%nz;
+    int per_i_e = ((int)ijk[0] + 1 + (int)_nx)%(int)_nx,
+        per_i_w = ((int)ijk[0] - 1 + (int)_nx)%(int)_nx,
+        per_j_n = ((int)ijk[1] + 1 + (int)_ny)%(int)_ny,
+        per_j_s = ((int)ijk[1] - 1 + (int)_ny)%(int)_ny,
+        per_k_t = ((int)ijk[2] + 1 + (int)_nz)%(int)_nz,
+        per_k_b = ((int)ijk[2] - 1 + (int)_nz)%(int)_nz;
 
-    unsigned int nn_e = lat->IJK_TO_N(per_i_e,j,k),
-      nn_w = lat->IJK_TO_N(per_i_w,j,k),
-      nn_n = lat->IJK_TO_N(i,per_j_n,k),
-      nn_s = lat->IJK_TO_N(i,per_j_s,k),
-      nn_t = lat->IJK_TO_N(i,j,per_k_t),
-      nn_b = lat->IJK_TO_N(i,j,per_k_b);
-
+    UINT ijk_e[3] = {per_i_e, ijk[1], ijk[2]},
+      ijk_w[3] = {per_i_w, ijk[1], ijk[2]},
+      ijk_n[3] = {ijk[0], per_j_n, ijk[2]},
+      ijk_s[3] = {ijk[0], per_j_s, ijk[2]},
+      ijk_t[3] = {ijk[0], ijk[1], per_k_t},
+      ijk_b[3] = {ijk[0], ijk[1], per_k_b};
+      
     double dx_ux, dy_ux, dz_ux, dx_uy, dy_uy, dz_uy, dx_uz, dy_uz, dz_uz;
-    comp_der(lat, nn_w, nn_e, ux, uy, uz, &dx_ux, &dx_uy, &dx_uz);
-    comp_der(lat, nn_s, nn_n, ux, uy, uz, &dy_ux, &dy_uy, &dy_uz);
-    comp_der(lat, nn_b, nn_t, ux, uy, uz, &dz_ux, &dz_uy, &dz_uz);
+    comp_der(fdata, fnode_enum, E, ijk_e, ijk_w, ux, uy, uz, &dx_ux, &dx_uy, &dx_uz);
+    comp_der(fdata, fnode_enum, N, ijk_n, ijk_s, ux, uy, uz, &dy_ux, &dy_uy, &dy_uz);
+    comp_der(fdata, fnode_enum, T, ijk_t, ijk_b, ux, uy, uz, &dz_ux, &dz_uy, &dz_uz);
 
     double P_xx = pab_cff*den*dx_ux,
       P_xy = pab_cff*den*0.5*(dx_uy + dy_ux),
@@ -290,55 +407,53 @@ void Isothermal3D::initialize_fi(Lattice::Isothermal3D *lat)
 	}		
 }
 //---------------------------------------------------------------------------
-Isothermal3D::Isothermal3D(Lattice::Isothermal3D *lat, double ref_den,
-  double dr, double dt, double kvisc, double gx, double gy, double gz,
-  unsigned char flow_type, unsigned char coll_oper, bool external_forcing)
+IsothermalKernel::IsothermalKernel(Geometry *geom, NodeSet *fnodes,
+                                   IsothermalFlowParams *params)
 {
-  config_evolve(lat);
+  init_ci_masks();
+  config_evolve(geom, fnodes);
 
-  a_ref_den = ref_den; a_dr = dr; a_dt = dt;
+  a_ref_den = params->ref_den; a_dr = params->dr; a_dt = params->dt;
   a_inv_ref_den = 1.0/a_ref_den; a_inv_dr = 1.0/a_dr; a_inv_dt = 1.0/a_dt;
 
   a_cr = a_dr*a_inv_dt; a_inv_cr = 1.0/a_cr;
   a_bf_unit = a_ref_den*a_inv_dt*a_cr;
   a_inv_bf_unit = 1.0/a_bf_unit;
 
-  if( flow_type == LB_Const::STOKES_FLOW ) {a_eq_func = &eq1;}
+  if( params->flow_type == STOKES_FLOW ) {a_eq_func = &eq1;}
   else {a_eq_func = &eq2;}
 
-  if( external_forcing ) {a_frc_func = &D3Q19::frc2;}
+  if( params->external_forcing ) {a_frc_func = &D3Q19::frc2;}
   else {a_frc_func = &D3Q19::frc1;}
     
-  switch( coll_oper ) {
-    case LB_Const::BGK: {
-      a_coll_oper = new LB_Collision::BGK_D3Q19();
+  switch( params->collision_operator ) {
+    case BGK: {
+      a_coll_oper = new BGK_D3Q19();
       break;}
-    case LB_Const::TRT: {
-      a_coll_oper = new LB_Collision::TRT_D3Q19();
+    case TRT: {
+      a_coll_oper = new TRT_D3Q19();
       break;}
-//    case LB_Const::MRT: {
-//      a_coll_oper = new LB_Collision::MRT_D3Q19();
+//    case MRT: {
+//      a_coll_oper = new MRT_D3Q19();
 //      break;}
-//    case LB_Const::REG: {
-//      a_coll_oper = new LB_Collision::REG_D3Q19();
+//    case REG: {
+//      a_coll_oper = new REG_D3Q19();
 //      break;}
     default: {
       printf("Warning: using default collision operator (TRT)\n");
-      a_coll_oper = new LB_Collision::TRT_D3Q19();}
+      a_coll_oper = new TRT_D3Q19();}
   } 
-  set_gravity(gx, gy, gz);
-  set_kvisc(kvisc);
+  set_gravity(params->gx, params->gy, params->gz);
+  set_kvisc(params->kvisc);
   a_cs = a_cr*CT;
-
-  initialize_fi(lat);
 }
 //---------------------------------------------------------------------------
-Isothermal3D::~Isothermal3D()
+IsothermalKernel::~IsothermalKernel()
 {
   dealloc_memory();
 }
 //---------------------------------------------------------------------------
-void Isothermal3D::set_kvisc(double kvisc)
+void IsothermalKernel::set_kvisc(double kvisc)
 {
   a_kvisc = kvisc;
   double dimless_kvisc = a_inv_dr*a_inv_cr*kvisc;
@@ -346,23 +461,29 @@ void Isothermal3D::set_kvisc(double kvisc)
   a_coll_oper->set_kvisc(dimless_kvisc);  
 }
 //---------------------------------------------------------------------------
-void Isothermal3D::set_gravity(double gx, double gy, double gz)
+void IsothermalKernel::set_gravity(double gx, double gy, double gz)
 {
   a_gx = gx; a_gy = gy; a_gz = gz;
 }
 //---------------------------------------------------------------------------
-void Isothermal3D::evolve(Lattice::Isothermal3D *lat)
+void IsothermalKernel::evolve(IsothermalNodeData *fdata)
 {
+  NodeSet *fnodes = fdata->get_nodeset();
+  FieldData *den_data = fdata->den(), *vx_data = fdata->velx(),
+    *vy_data = fdata->vely(), *vz_data = fdata->velz(),
+    *fx_data = fdata->frcx(), *fy_data = fdata->frcy(),
+    *fz_data = fdata->frcz();
+
   ULLINT fi_ind[Q];
-  unsigned int fluid_ncount = lat->fluid_ncount();
+  UINT fluid_ncount = fnodes->get_node_count();
   double fi[Q], feq[Q], fext[Q], gx = a_dt*a_inv_cr*a_gx,
     gy = a_dt*a_inv_cr*a_gy, gz = a_dt*a_inv_cr*a_gz;
 
-  FI_IND_FPTR fi_ind_func = &Isothermal3D::get_fi_ind_arr_even_t;
-  if( a_odd_t ) fi_ind_func = &Isothermal3D::get_fi_ind_arr_odd_t;
+  FI_IND_FPTR fi_ind_func = &IsothermalKernel::get_fi_ind_arr_even_t;
+  if( a_odd_t ) fi_ind_func = &IsothermalKernel::get_fi_ind_arr_odd_t;
 
   #pragma omp parallel for private(fi_ind, fi, feq, fext)
-  for(unsigned int fnode_enum = 0; fnode_enum < fluid_ncount; ++fnode_enum)
+  for(UINT fnode_enum = 0; fnode_enum < fluid_ncount; ++fnode_enum)
   {
     (this->*fi_ind_func)(fi_ind, fnode_enum);
 
@@ -386,10 +507,10 @@ void Isothermal3D::evolve(Lattice::Isothermal3D *lat)
     fi[TE] = a_fi[fi_ind[TE]];
     fi[TN] = a_fi[fi_ind[TN]];
 
-    double den, ux, uy, uz, fx, fy, fz,
-      inv_den = den_vel_moms(fi, &den, &ux, &uy, &uz);
-
-    lat->get_fnode_force(fnode_enum,&fx,&fy,&fz);
+    double den, ux, uy, uz, inv_den = den_vel_moms(fi, &den, &ux, &uy, &uz),
+      fx = fx_data->get_val_n(fnode_enum), fy = fy_data->get_val_n(fnode_enum), 
+      fz = fz_data->get_val_n(fnode_enum); 
+    
     fx *= a_inv_bf_unit; fy *= a_inv_bf_unit; fz *= a_inv_bf_unit;
     fx += den*gx; fy += den*gy; fz += den*gz;
 
@@ -398,8 +519,11 @@ void Isothermal3D::evolve(Lattice::Isothermal3D *lat)
     a_eq_func(den,ux,uy,uz,feq);
 
     den *= a_ref_den; ux *= a_cr; uy *= a_cr; uz *= a_cr;
-    lat->set_fnode_den(fnode_enum,den);
-    lat->set_fnode_vel(fnode_enum,ux,uy,uz);
+
+    den_data->set_val_n(fnode_enum, den); 
+    vx_data->set_val_n(fnode_enum, ux); 
+    vy_data->set_val_n(fnode_enum, uy); 
+    vz_data->set_val_n(fnode_enum, uz); 
 
     a_coll_oper->relax(fi, feq, fext);
     

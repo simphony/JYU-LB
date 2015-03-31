@@ -5,9 +5,7 @@
 //===========================================================================
 #include <stdio.h>
 #include "D3Q19.h"
-#include "lb_collision.h"
-//===========================================================================
-using namespace LB_Collision;
+#include "collision.h"
 //===========================================================================
 // BGK
 //===========================================================================
@@ -23,7 +21,7 @@ BGK_D3Q19::~BGK_D3Q19()
 void BGK_D3Q19::set_kvisc(double dimless_kvisc)
 {
   using namespace D3Q19;
-  BaseOperator::set_kvisc(dimless_kvisc);
+  BaseCollisionOperator::set_kvisc(dimless_kvisc);
 
   a_tau = 0.5 + INV_CT2*a_dimless_kvisc;
   a_inv_tau = 1.0/a_tau;
@@ -76,7 +74,7 @@ TRT_D3Q19::~TRT_D3Q19()
 void TRT_D3Q19::set_kvisc(double dimless_kvisc)
 {
   using namespace D3Q19;
-  BaseOperator::set_kvisc(dimless_kvisc);
+  BaseCollisionOperator::set_kvisc(dimless_kvisc);
 
   a_tau_e = 0.5 + INV_CT2*a_dimless_kvisc;
   a_inv_tau_e = 1.0/a_tau_e;

@@ -7,29 +7,32 @@ LFLAGS=-fopenmp -O3
 
 all: jyu_lb_isothermal
 
-jyu_lb_isothermal: dirs lattice.o collision.o kernel.o solver.o parser.o raw_io.o main.o
-		   $(CC) $(LFLAGS) lattice.o collision.o kernel.o solver.o parser.o raw_io.o main.o -o ../../bin/jyu_lb_isothermal.exe
+jyu_lb_isothermal: dirs node.o filter.o collision.o kernel.o solver.o parser.o raw_io.o main.o
+		   $(CC) $(LFLAGS) node.o filter.o collision.o kernel.o solver.o parser.o raw_io.o main.o -o ../../bin/jyu_lb_isothermal.exe
 
 
 dirs:
 	@mkdir -p ../../bin
 
-node.o: lattice.cpp
+node.o: node.cpp
 	$(CC) $(CFLAGS) $< -o $@
 
-collision.o: lb_collision.cpp
+filter.o: filter.cpp
+	$(CC) $(CFLAGS) $< -o $@
+
+collision.o: collision.cpp
 	$(CC) $(CFLAGS) $(INC) $< -o $@
 
-kernel.o: lb_kernel.cpp
+kernel.o: kernel.cpp
 	$(CC) $(CFLAGS) $(INC) $< -o $@
 
-solver.o: lb_solver.cpp
+solver.o: solver.cpp
 	$(CC) $(CFLAGS) $(INC) $< -o $@
 
-parser.o: lb_input_parser.cpp
+parser.o: input_parser.cpp
 	$(CC) $(CFLAGS) $(INC) $< -o $@
 
-raw_io.o: lb_raw_io.cpp
+raw_io.o: raw_io.cpp
 	$(CC) $(CFLAGS) $(INC) $< -o $@
 
 main.o: jyu_lb_isothermal.cpp

@@ -4,41 +4,73 @@
 // Details: Defines data structures for flow parameters and state information
 //===========================================================================
 #include <math.h>
-#include "lb_solver.h"
+#include <stdio.h>
+#include "solver.h"
 //===========================================================================
-using namespace LB_Solver::Isothermal3D;
-//===========================================================================
-TimeStepper::TimeStepper(Lattice::Isothermal3D *lat,FlowParams *params)
+IsothermalSolver::IsothermalSolver(Geometry *geom,
+                                   IsothermalFlowParams *params)
 {
-  a_kernel = new LB_Kernel::Isothermal3D(lat, params->ref_den, params->dr,
-    params->dt, params->kvisc, params->gx, params->gy, params->gz,
-    params->flow_type, params->collision_operator, params->external_forcing);
+  _lat = new Lattice(geom->get_lattice());
+  
+  GeomDataFilter fnode_filter(geom->get_phase(), FLUID_NODE);
+  _fnodes = new NodeSubset(_lat, &fnode_filter);
+
+  double iden = params->ref_den, ivel[3] = {0,0,0}, ifrc[3] = {0,0,0};
+  _fdata = new IsothermalNodeData(_fnodes, iden, ivel, ifrc);
+
+  _kernel = new IsothermalKernel(geom, _fnodes, params);
+  _is_initialized = false;
 }
 //---------------------------------------------------------------------------
-TimeStepper::~TimeStepper()
+IsothermalSolver::~IsothermalSolver()
 {
-  if( a_kernel != 0 ) {
-    delete a_kernel;
-    a_kernel = 0;
+  if( _lat != 0 ) {
+    delete _lat;
+    _lat = 0;
+  }
+  if( _fnodes != 0 ) {
+    delete _fnodes;
+    _fnodes = 0;
+  }
+  if( _fdata != 0 ) {
+    delete _fdata;
+    _fdata = 0;
+  }
+  if( _kernel != 0 ) {
+    delete _kernel;
+    _kernel = 0;
   }
 }
 //---------------------------------------------------------------------------
-void TimeStepper::evolve(Lattice::Isothermal3D *lat, unsigned int tsteps)
+void IsothermalSolver::init_field_data()  throw(std::runtime_error)
 {
-  for(unsigned int t = 0; t < tsteps; ++t) {
-    a_kernel->evolve(lat);
+  if( _is_initialized ) {
+    throw std::runtime_error("Field variables already initialized!");
+  }
+  _kernel->initialize_fi(_fdata);
+  _is_initialized = true;
+}
+//---------------------------------------------------------------------------
+void IsothermalSolver::evolve(UINT tsteps) throw(std::runtime_error)
+{
+  if( !_is_initialized ) {
+    throw std::runtime_error("Field variables not initialized!");
+  }
+  for(UINT t = 0; t < tsteps; ++t) {
+    _kernel->evolve(_fdata);
   }
 }
 //---------------------------------------------------------------------------
-void TimeStepper::calc_flow_info(Lattice::Isothermal3D *lat, FlowInfo *info)
+void IsothermalSolver::calc_flow_info(IsothermalFlowInfo *info)
 {
-  double rden = a_kernel->get_ref_den(),
+  NodeSet *fnodes = _fdata->get_nodeset();
+  UINT fluid_ncount = fnodes->get_node_count();
+
+  double rden = _kernel->get_ref_den(),
     pri_max_den, pri_min_den, pri_max_u2, 
     sha_max_den = rden, sha_min_den = rden, sha_max_u2 = 0.0, 
     tot_den = 0.0, tot_ux = 0.0, tot_uy = 0.0, tot_uz = 0.0, tot_u2 = 0.0,
     tot_jx = 0.0, tot_jy = 0.0, tot_jz = 0.0, tot_j2 = 0.0;
-
-  unsigned int fluid_ncount = lat->fluid_ncount();
 
   #pragma omp parallel private(pri_max_den,pri_min_den,pri_max_u2)
   {
@@ -47,15 +79,16 @@ void TimeStepper::calc_flow_info(Lattice::Isothermal3D *lat, FlowInfo *info)
     pri_max_u2 = 0.0; 
 
     #pragma omp for reduction(+:tot_den,tot_ux,tot_uy,tot_uz,tot_u2,tot_jx,tot_jy,tot_jz,tot_j2)
-    for(unsigned int fnode_enum = 0; fnode_enum < fluid_ncount; ++fnode_enum)
+    for(UINT fnode_enum = 0; fnode_enum < fluid_ncount; ++fnode_enum)
     {
-      double den, ux, uy, uz, u2, jx, jy, jz, j2;
-      lat->get_fnode_den(fnode_enum, &den);
-      lat->get_fnode_vel(fnode_enum, &ux, &uy, &uz);
-
-      jx = den*ux; jy = den*uy; jz = den*uz;
-      u2 = sqrt(ux*ux + uy*uy + uz*uz);
-      j2 = den*u2;
+      double den = _fdata->den()->get_val_n(fnode_enum),
+        ux = _fdata->velx()->get_val_n(fnode_enum),
+        uy = _fdata->vely()->get_val_n(fnode_enum),
+        uz = _fdata->velz()->get_val_n(fnode_enum),
+      
+        jx = den*ux, jy = den*uy, jz = den*uz,
+        u2 = sqrt(ux*ux + uy*uy + uz*uz),
+        j2 = den*u2;
       
       tot_den += den;
  	    tot_ux += ux; tot_uy += uy; tot_uz += uz; tot_u2 += u2;

@@ -3,11 +3,12 @@
 // Description: Specification of the D3Q19 discrete velocity set
 // Details: Isothermal equilibrium and forcing functions up to 2nd-order
 //===========================================================================
-#ifndef LB_D3Q19_H
-#define LB_D3Q19_H
+#ifndef D3Q19_H
+#define D3Q19_H
 //===========================================================================
 #include <math.h>
-#include "lb_const.h"
+#include "def.h"
+#include "const.h"
 //===========================================================================
 // Five alternative data layouts for the distribution values of D3Q19
 //---------------------------------------------------------------------------
@@ -171,7 +172,6 @@ namespace D3Q19
   //-------------------------------------------------------------------------
   inline void get_kin_proj1(double KI1[][3])
   {
-    using namespace LB_Const;
     for(unsigned l = 0; l < Q; ++l)
     {
       double dcix = CI[l][X], dciy = CI[l][Y], dciz = CI[l][Z];
@@ -184,7 +184,6 @@ namespace D3Q19
   //-------------------------------------------------------------------------
   inline void get_kin_proj2(double KI2[][3][3])
   {
-    using namespace LB_Const;
     for(unsigned l = 0; l < Q; ++l)
     {
       double dcix = CI[l][X], dciy = CI[l][Y], dciz = CI[l][Z];
@@ -206,7 +205,6 @@ namespace D3Q19
   inline double eq1_l(unsigned char l, double den, double ux,
                       double uy, double uz)
   {
-    using namespace LB_Const;
     double dcix = CI[l][X], dciy = CI[l][Y], dciz = CI[l][Z];
 
     return WI[l]*den*(1.0 + INV_CT2*(dcix*ux + dciy*uy + dciz*uz));
@@ -215,7 +213,6 @@ namespace D3Q19
   inline double eq2_l(unsigned char l, double den, double ux,
                       double uy, double uz)
   {
-    using namespace LB_Const;
     double dcix = CI[l][X], dciy = CI[l][Y], dciz = CI[l][Z],
       ki2_xx = dcix*dcix - CT2, ki2_xy = dcix*dciy, ki2_xz = dcix*dciz,
       ki2_yy = dciy*dciy - CT2, ki2_yz = dciy*dciz,
@@ -232,7 +229,6 @@ namespace D3Q19
   inline double frc1_l(unsigned char l, double ux, double uy, double uz,
                        double fx, double fy, double fz)
   {
-    using namespace LB_Const;
     double dcix = CI[l][X], dciy = CI[l][Y], dciz = CI[l][Z];
 
     return WI[l]*INV_CT2*(dcix*fx + dciy*fy + dciz*fz);
@@ -241,7 +237,6 @@ namespace D3Q19
   inline double frc2_l(unsigned char l, double ux, double uy, double uz,
                        double fx, double fy, double fz)
   {
-    using namespace LB_Const;
     double dcix = CI[l][X], dciy = CI[l][Y], dciz = CI[l][Z],
       ki2_xx = dcix*dcix - CT2, ki2_xy = dcix*dciy, ki2_xz = dcix*dciz,
       ki2_yy = dciy*dciy - CT2, ki2_yz = dciy*dciz,

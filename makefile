@@ -1,8 +1,8 @@
-VPATH=source/isothermal3D/
+VPATH=source/isothermal/
 
-all: isothermal3D
+all: isothermal
 
-isothermal3D:
-	cd source/isothermal3D/; make
-	cd source/isothermal3D/; rm *.o
+isothermal:
+	cd source/isothermal/; make
+	cd source/isothermal/; rm *.o
 

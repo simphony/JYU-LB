@@ -4,14 +4,13 @@
 // Details: 
 //===========================================================================
 #include <limits>
-#include "lb_const.h"
-#include "lb_input_parser.h"
+#include "const.h"
+#include "input_parser.h"
 //===========================================================================
 using namespace std;
-using namespace LB_Input_Parser;
 //===========================================================================
-Isothermal3D::Isothermal3D(int argc, char *argv[],
-                           LB_Solver::Isothermal3D::FlowParams *params)
+IsothermalInputParser::IsothermalInputParser(int argc, char *argv[],
+  IsothermalFlowParams *params)
 {
   // Set default values
   params->dr = 1.0;
@@ -21,15 +20,15 @@ Isothermal3D::Isothermal3D(int argc, char *argv[],
   params->gx = 0.0;
   params->gy = 0.0;
   params->gz = 0.0;
-  params->flow_type = LB_Const::STOKES_FLOW;
-  params->collision_operator = LB_Const::BGK;
+  params->flow_type = STOKES_FLOW;
+  params->collision_operator = BGK;
   params->external_forcing = false;
   
   a_nx = 1; a_ny = 1; a_nz = 1;
   a_evol_info_period = 100;
   a_time_steps = 1000;
   
-  a_base_io_fname = "jyu_lb_isothermal3D";
+  a_base_io_fname = "jyu_lb_isothermal";
   a_exec_info = "";
 
   if( argc < 2 ) {
@@ -40,11 +39,11 @@ Isothermal3D::Isothermal3D(int argc, char *argv[],
   parse_input_script(argc, argv, params);
 }
 //---------------------------------------------------------------------------
-Isothermal3D::~Isothermal3D()
+IsothermalInputParser::~IsothermalInputParser()
 {
 }
 //---------------------------------------------------------------------------
-char Isothermal3D::ignore_comments(ifstream &ifile) const
+char IsothermalInputParser::ignore_comments(ifstream &ifile) const
 {
   char input_chr = ifile.peek();
   while( input_chr == '#' ) {
@@ -54,8 +53,8 @@ char Isothermal3D::ignore_comments(ifstream &ifile) const
   return input_chr;
 }
 //---------------------------------------------------------------------------
-void Isothermal3D::parse_input_script(int argc, char *argv[],
-  LB_Solver::Isothermal3D::FlowParams *params)
+void IsothermalInputParser::parse_input_script(int argc, char *argv[],
+  IsothermalFlowParams *params)
 {
   ifstream ifile(argv[1]);
   if( !ifile.is_open() ) {
@@ -140,7 +139,7 @@ void Isothermal3D::parse_input_script(int argc, char *argv[],
   set_exec_info(input_str.c_str());
 }
 //---------------------------------------------------------------------------
-void Isothermal3D::set_base_io_fname(const char *fname)
+void IsothermalInputParser::set_base_io_fname(const char *fname)
 {
   a_base_io_fname = fname;
 
@@ -152,7 +151,7 @@ void Isothermal3D::set_base_io_fname(const char *fname)
   }
 }
 //---------------------------------------------------------------------------
-void Isothermal3D::set_nx(unsigned int size)
+void IsothermalInputParser::set_nx(unsigned int size)
 {
   if( size < 1 ) {
     printf("Warning: invalid lattice size argument!");
@@ -162,7 +161,7 @@ void Isothermal3D::set_nx(unsigned int size)
   a_nx = size;
 }
 //---------------------------------------------------------------------------
-void Isothermal3D::set_ny(unsigned int size)
+void IsothermalInputParser::set_ny(unsigned int size)
 {
   if( size < 1 ) {
     printf("Warning: invalid lattice size argument!");
@@ -172,7 +171,7 @@ void Isothermal3D::set_ny(unsigned int size)
   a_ny = size;
 }
 //---------------------------------------------------------------------------
-void Isothermal3D::set_nz(unsigned int size)
+void IsothermalInputParser::set_nz(unsigned int size)
 {
   if( size < 1 ) {
     printf("Warning: invalid lattice size argument!");
@@ -182,8 +181,8 @@ void Isothermal3D::set_nz(unsigned int size)
   a_nz = size;
 }
 //---------------------------------------------------------------------------
-void Isothermal3D::set_lattice_spacing(double dr,
-  LB_Solver::Isothermal3D::FlowParams *params)
+void IsothermalInputParser::set_lattice_spacing(double dr,
+  IsothermalFlowParams *params)
 {
   if( dr <= 0.0 ) {
     printf("Warning: lattice spacing must be positive!");
@@ -193,8 +192,8 @@ void Isothermal3D::set_lattice_spacing(double dr,
   params->dr = dr;
 }
 //---------------------------------------------------------------------------
-void Isothermal3D::set_discrete_time_step(double dt,
-  LB_Solver::Isothermal3D::FlowParams *params)
+void IsothermalInputParser::set_discrete_time_step(double dt,
+  IsothermalFlowParams *params)
 {
   if( dt <= 0.0 ) {
     printf("Warning: discrete time step must be positive!");
@@ -204,8 +203,8 @@ void Isothermal3D::set_discrete_time_step(double dt,
   params->dt = dt;
 }
 //---------------------------------------------------------------------------
-void Isothermal3D::set_ref_den(double rden,
-  LB_Solver::Isothermal3D::FlowParams *params)
+void IsothermalInputParser::set_ref_den(double rden,
+  IsothermalFlowParams *params)
 {
   if( rden <= 0.0 ) {
     printf("Warning: reference density must be positive!");
@@ -215,8 +214,8 @@ void Isothermal3D::set_ref_den(double rden,
   params->ref_den = rden;
 }
 //---------------------------------------------------------------------------
-void Isothermal3D::set_kvisc(double kvisc,
-  LB_Solver::Isothermal3D::FlowParams *params)
+void IsothermalInputParser::set_kvisc(double kvisc,
+  IsothermalFlowParams *params)
 {
   if( kvisc <= 0.0 ) {
     printf("Warning: kinematic viscosity must be positive!");
@@ -226,8 +225,8 @@ void Isothermal3D::set_kvisc(double kvisc,
   params->kvisc = kvisc;
 }
 //---------------------------------------------------------------------------
-void Isothermal3D::set_extern_forcing(unsigned int is_extern_forcing,
-  LB_Solver::Isothermal3D::FlowParams *params)
+void IsothermalInputParser::set_extern_forcing(
+  unsigned int is_extern_forcing, IsothermalFlowParams *params)
 {
   if( is_extern_forcing != 0 && is_extern_forcing != 1 ) {
     printf("Warning: invalid external forcing option argument!");
@@ -237,12 +236,12 @@ void Isothermal3D::set_extern_forcing(unsigned int is_extern_forcing,
   params->external_forcing = (is_extern_forcing == 1);
 }
 //---------------------------------------------------------------------------
-void Isothermal3D::set_flow_type(unsigned int flow_type,
-  LB_Solver::Isothermal3D::FlowParams *params)
+void IsothermalInputParser::set_flow_type(unsigned int flow_type,
+  IsothermalFlowParams *params)
 {
-  if( flow_type != LB_Const::STOKES_FLOW &&
-      flow_type != LB_Const::LAMINAR_FLOW &&
-      flow_type != LB_Const::TURBULENT_FLOW ) {
+  if( flow_type != STOKES_FLOW &&
+      flow_type != LAMINAR_FLOW &&
+      flow_type != TURBULENT_FLOW ) {
     printf("Warning: invalid flow type argument!");
     printf("Warning: using default flow type!\n");
     return;
@@ -250,11 +249,11 @@ void Isothermal3D::set_flow_type(unsigned int flow_type,
   params->flow_type = flow_type;
 }
 //---------------------------------------------------------------------------
-void Isothermal3D::set_collision_operator(unsigned int coll_oper,
-  LB_Solver::Isothermal3D::FlowParams *params)
+void IsothermalInputParser::set_collision_operator(unsigned int coll_oper,
+  IsothermalFlowParams *params)
 {
-  if( coll_oper != LB_Const::BGK && coll_oper != LB_Const::TRT &&
-      coll_oper != LB_Const::MRT && coll_oper != LB_Const::REG ) {
+  if( coll_oper != BGK && coll_oper != TRT &&
+      coll_oper != MRT && coll_oper != REG ) {
     printf("Warning: invalid collision operator argument!");
     printf("Warning: using default collision operator!\n");
     return;
@@ -262,17 +261,18 @@ void Isothermal3D::set_collision_operator(unsigned int coll_oper,
   params->collision_operator = coll_oper;
 }
 //---------------------------------------------------------------------------
-void Isothermal3D::set_tstep_count(unsigned int tstep_count)
+void IsothermalInputParser::set_tstep_count(unsigned int tstep_count)
 {
   a_time_steps = tstep_count;
 }
 //---------------------------------------------------------------------------
-void Isothermal3D::set_evol_info_interval(unsigned int evol_info_period)
+void IsothermalInputParser::set_evol_info_interval(
+  unsigned int evol_info_period)
 {
   a_evol_info_period = evol_info_period;
 }
 //---------------------------------------------------------------------------
-void Isothermal3D::set_exec_info(const char *exec_info)
+void IsothermalInputParser::set_exec_info(const char *exec_info)
 {
   a_exec_info = exec_info;
 
