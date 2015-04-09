@@ -252,7 +252,7 @@ void IsothermalKernel::config_evolve(Geometry *geom, NodeSet *fnodes)
         per_nj = (nj + (int)_ny)%(int)_ny,
         per_nk = (nk + (int)_nz)%(int)_nz;
             
-      UINT ijk_n[3] = {per_ni, per_nj, per_nk};
+      UINT ijk_n[3] = {(UINT)per_ni, (UINT)per_nj, (UINT)per_nk};
       ULLINT mem_addr_ind = 19ull*(ULLINT)fnode_enum + (ULLINT)l;
                
       // Halfway-bounceback (FLUID_NODE->stream, SOLID_NODE->hbb)
@@ -376,12 +376,12 @@ void IsothermalKernel::initialize_fi(IsothermalNodeData *fdata)
         per_k_t = ((int)ijk[2] + 1 + (int)_nz)%(int)_nz,
         per_k_b = ((int)ijk[2] - 1 + (int)_nz)%(int)_nz;
 
-    UINT ijk_e[3] = {per_i_e, ijk[1], ijk[2]},
-      ijk_w[3] = {per_i_w, ijk[1], ijk[2]},
-      ijk_n[3] = {ijk[0], per_j_n, ijk[2]},
-      ijk_s[3] = {ijk[0], per_j_s, ijk[2]},
-      ijk_t[3] = {ijk[0], ijk[1], per_k_t},
-      ijk_b[3] = {ijk[0], ijk[1], per_k_b};
+    UINT ijk_e[3] = {(UINT)per_i_e, ijk[1], ijk[2]},
+      ijk_w[3] = {(UINT)per_i_w, ijk[1], ijk[2]},
+      ijk_n[3] = {ijk[0], (UINT)per_j_n, ijk[2]},
+      ijk_s[3] = {ijk[0], (UINT)per_j_s, ijk[2]},
+      ijk_t[3] = {ijk[0], ijk[1], (UINT)per_k_t},
+      ijk_b[3] = {ijk[0], ijk[1], (UINT)per_k_b};
       
     double dx_ux, dy_ux, dz_ux, dx_uy, dy_uy, dz_uy, dx_uz, dy_uz, dz_uz;
     comp_der(fdata, fnode_enum, E, ijk_e, ijk_w, ux, uy, uz, &dx_ux, &dx_uy, &dx_uz);
