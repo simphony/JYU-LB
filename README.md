@@ -2,4 +2,4 @@
 
 [![Build Status](https://travis-ci.org/simphony/JYU-LB.svg)](https://travis-ci.org/simphony/JYU-LB)
 
-The source code of the JYU-LB code (version 0.1.3.dev0).
+Implementation of a basic lattice-Boltzmann solver (version 0.2.0).
