@@ -1,0 +1,7 @@
+JYU-LB CHANGELOG
+=========================
+
+Release 0.2.0
+-------------
+* Cython implementation of the JYU-LB
+* Added setup files
