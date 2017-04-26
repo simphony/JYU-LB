@@ -1,8 +1,3 @@
 language: cpp
 
-install:
-  - pip install Cython
-  - pip install -r dev_requirements.txt
-  - python setup.py develop
-
 script: make
